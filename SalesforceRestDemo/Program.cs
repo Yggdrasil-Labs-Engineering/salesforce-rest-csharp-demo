@@ -15,14 +15,33 @@ using HttpClient client = new HttpClient();
 client.DefaultRequestHeaders.Authorization =
     new AuthenticationHeaderValue("Bearer", accessToken);
 
-string requestUrl =
-    $"{instanceUrl}/services/data/v65.0/query/?q=SELECT+Id,Name+FROM+Account+LIMIT+5";
+bool runNegativeTest = args.Contains("--negative");
+
+string requestUrl = runNegativeTest
+    ? $"{instanceUrl}/services/data/v65.0/sobjects/DefinitelyNotARealObject"
+    : $"{instanceUrl}/services/data/v65.0/query/?q=SELECT+Id,Name+FROM+Account+LIMIT+5";
+
+Console.WriteLine(
+    runNegativeTest
+        ? "Running negative Salesforce REST API test..."
+        : "Running positive Salesforce REST API test..."
+);
 
 HttpResponseMessage response = await client.GetAsync(requestUrl);
 
 if (!response.IsSuccessStatusCode)
 {
-    Console.WriteLine($"FAIL: Salesforce returned HTTP {(int)response.StatusCode}");
+    if (runNegativeTest)
+    {
+        Console.WriteLine(
+            $"PASS: Salesforce rejected the invalid request with HTTP {(int)response.StatusCode}."
+        );
+        return;
+    }
+
+    Console.WriteLine(
+        $"FAIL: Salesforce returned HTTP {(int)response.StatusCode}."
+    );
     return;
 }
 
